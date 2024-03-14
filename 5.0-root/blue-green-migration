@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 MONGO_HOST_COLD MONGO_HOST_HOT"
+    exit 1
+fi
+
+MONGO_HOST_COLD=$1
+MONGO_HOST_HOT=$2
+TIMESTAMP=$(date +%Y-%m-%d-%H-%M-%S)
+LOG_FILE="migration${TIMESTAMP}.log"
+
+echo "[$(date)] Starting data migration from $MONGO_HOST_HOT to $MONGO_HOST_COLD" | tee -a "$LOG_FILE"
+
+echo "Enter the password of $MONGO_HOST_HOT"
+read -s MONGO_PASSWORD
+
+echo "[$(date)] Starting mongodump" | tee -a "$LOG_FILE"
+mongodump "mongodb://nogravity:${MONGO_PASSWORD}@${MONGO_HOST_HOT}:27017" --archive="${HOME}/backups/mongo.${TIMESTAMP}.backup" --verbose | tee -a "$LOG_FILE"
+
+echo "[$(date)] Starting mongorestore" | tee -a "$LOG_FILE"
+mongorestore "mongodb://nogravity:${MONGO_PASSWORD}@${MONGO_HOST_COLD}:27017" --archive="${HOME}/backups/mongo.${TIMESTAMP}.backup" --verbose | tee -a "$LOG_FILE"
+
+echo "[$(date)] Data migration completed successfully" | tee -a "$LOG_FILE"
